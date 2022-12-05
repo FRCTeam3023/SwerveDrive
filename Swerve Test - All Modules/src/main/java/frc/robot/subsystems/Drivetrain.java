@@ -25,15 +25,15 @@ public class Drivetrain extends SubsystemBase {
 
   private final ADXRS450_Gyro gyro = new ADXRS450_Gyro(SPI.Port.kOnboardCS0);
 
-  private SwerveModule frontLeft = new SwerveModule(1, 1, 5, ModuleConstants.MODULE1_OFFSET); // Module 1
-  private SwerveModule frontRight = new SwerveModule(2, 2, 6, ModuleConstants.MODULE2_OFFSET); // Module 2
-  private SwerveModule backLeft = new SwerveModule(3, 3, 7, ModuleConstants.MODULE3_OFFSET); // Module 3
-  private SwerveModule backRight = new SwerveModule(4, 4, 8, ModuleConstants.MODULE4_OFFSET); // Module 4
+  private SwerveModule frontLeft = new SwerveModule(1, 1, 5, ModuleConstants.MODULE1_OFFSET, true, 0); // Module 1
+  private SwerveModule frontRight = new SwerveModule(2, 2, 6, ModuleConstants.MODULE2_OFFSET, false, 1); // Module 2
+  private SwerveModule backLeft = new SwerveModule(3, 3, 7, ModuleConstants.MODULE3_OFFSET, true, 2); // Module 3
+  private SwerveModule backRight = new SwerveModule(4, 4, 8, ModuleConstants.MODULE4_OFFSET, false, 3); // Module 4
 
-  public final Translation2d frontLeftLocation = new Translation2d(0.5,0.5);
-  public final Translation2d frontRightLocation = new Translation2d(0.5, -0.5);
-  public final Translation2d backLeftLocation = new Translation2d(-0.5,0.5);
-  public final Translation2d backRightLocation = new Translation2d(-0.5, -0.5);
+  public final Translation2d frontLeftLocation = new Translation2d(0.175,0.175);
+  public final Translation2d frontRightLocation = new Translation2d(0.175, -0.175);
+  public final Translation2d backLeftLocation = new Translation2d(-0.175,0.175);
+  public final Translation2d backRightLocation = new Translation2d(-0.175, -0.175);
 
   public final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
 
@@ -52,15 +52,13 @@ public class Drivetrain extends SubsystemBase {
     odometer.update(getChassisAngle(), frontLeft.getState(), frontRight.getState(), backLeft.getState(), backRight.getState());
 
     // This method will be called once per scheduler run
-    SmartDashboard.putBoolean("Module 1 Home State", frontLeft.homeStatus);
-    SmartDashboard.putBoolean("Module 2 Home State", frontRight.homeStatus);
-    SmartDashboard.putBoolean("Module 3 Home State", backLeft.homeStatus);
-    SmartDashboard.putBoolean("Module 4 Home State", backRight.homeStatus);
+    SmartDashboard.putBoolean("1 Homed", frontLeft.homeFinished);
+    SmartDashboard.putBoolean("2 Homed", frontRight.homeFinished);
+    SmartDashboard.putBoolean("3 Homed", backLeft.homeFinished);
+    SmartDashboard.putBoolean("4 Homed", backRight.homeFinished);
 
     SmartDashboard.putNumber("Bot Heading", getChassisAngle().getDegrees());
     SmartDashboard.putString("Bot Position", getPose().getTranslation().toString());
-
-    frontLeft.putMotorData();
 
   }
 
@@ -86,9 +84,6 @@ public class Drivetrain extends SubsystemBase {
     SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(chassisSpeeds);
 
     setModuleStates(moduleStates);
-
-    SmartDashboard.putNumber("tSpeed", moduleStates[0].speedMetersPerSecond);
-    SmartDashboard.putNumber("tAngle", moduleStates[0].angle.getDegrees());
 
   }
 
@@ -117,14 +112,12 @@ public class Drivetrain extends SubsystemBase {
    * Call resetHomeStatus() before to initialize the process
    */
   public void homeAllModules(){
-    //if it hasn't finished homing yet then home the module
-    if(!frontLeft.homeStatus) frontLeft.home();
-    if(!frontRight.homeStatus) frontRight.home();
-    if(!backLeft.homeStatus) backLeft.home();
-    if(!backRight.homeStatus) backRight.home();
-    
+    frontLeft.home();
+    frontRight.home();
+    backLeft.home();
+
     //if all modules are done then change variable state to true
-    allModuleHomeStatus = frontLeft.homeStatus; //&& frontRight.homeStatus && backLeft.homeStatus && backRight.homeStatus;
+    allModuleHomeStatus = frontLeft.homeFinished && frontRight.homeFinished && backLeft.homeFinished;
 
   }
 
@@ -136,6 +129,8 @@ public class Drivetrain extends SubsystemBase {
     frontRight.setHomeStatus(false);
     backLeft.setHomeStatus(false);
     backRight.setHomeStatus(false);
+
+    allModuleHomeStatus = false;
   }
 
   public void drivePercentage(double speed){
@@ -155,6 +150,15 @@ public class Drivetrain extends SubsystemBase {
     backLeft.stop();
     backRight.stop();
   }
+
+  public void ZeroEncoders() {
+    frontLeft.ZeroEncoders();
+    frontRight.ZeroEncoders();
+    backLeft.ZeroEncoders();
+    backRight.ZeroEncoders();
+  }
+
+
 
 
 }

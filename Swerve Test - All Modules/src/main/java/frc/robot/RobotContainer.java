@@ -22,6 +22,7 @@ import frc.robot.Constants.AutoConstants;
 import frc.robot.commands.DriveConstantPercentage;
 import frc.robot.commands.HomeCommand;
 import frc.robot.commands.JoystickDrive;
+import frc.robot.commands.ZeroEncoders;
 import frc.robot.subsystems.Drivetrain;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -45,6 +46,7 @@ public class RobotContainer {
 
   private JoystickButton homeButton = new JoystickButton(mainJoystick, 1);
   private JoystickButton driveButton = new JoystickButton(mainJoystick, 6);
+  private JoystickButton zeroButton = new JoystickButton(mainJoystick, 5);
 
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -63,6 +65,8 @@ public class RobotContainer {
   private void configureButtonBindings() {
     homeButton.whenHeld(new HomeCommand(drivetrain));
     driveButton.whileHeld(new DriveConstantPercentage(drivetrain));
+    zeroButton.whenPressed(new ZeroEncoders(drivetrain));
+    
 
   }
 
@@ -80,10 +84,10 @@ public class RobotContainer {
     Trajectory trajectory = TrajectoryGenerator.generateTrajectory(
       new Pose2d(0,0, new Rotation2d(0)),
       List.of(
-          new Translation2d(1,0),
-          new Translation2d(1,-1)
+          new Translation2d(0.5,0),
+          new Translation2d(0.5,-0.5)
       ),
-      new Pose2d(2,-1,Rotation2d.fromDegrees(180)), 
+      new Pose2d(1,-0.5,Rotation2d.fromDegrees(180)), 
       config
     );
 

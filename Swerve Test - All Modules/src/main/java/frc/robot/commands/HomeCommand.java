@@ -20,6 +20,7 @@ public class HomeCommand extends CommandBase {
   @Override
   public void initialize() {
     drivetrain.resetHomeStatus();  //reset the status of the modules to false to initialize the homing process
+    
   }
 
   // Called every time the scheduler runs while the command is scheduled.

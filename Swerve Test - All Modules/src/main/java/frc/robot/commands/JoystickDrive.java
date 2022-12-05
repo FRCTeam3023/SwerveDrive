@@ -8,6 +8,7 @@ import frc.robot.Constants;
 import frc.robot.Constants.ModuleConstants;
 import frc.robot.subsystems.Drivetrain;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 
 /** An example command that uses an example subsystem. */
@@ -40,11 +41,17 @@ public class JoystickDrive extends CommandBase {
   public void execute() {
     //take joystick inputs scaled to the max speed of the bot
     //desaturation will lead to never exeeding max on diagonals 
-    xSpeed = joystick.getY() * ModuleConstants.MAX_SPEED;
-    ySpeed = joystick.getX() * ModuleConstants.MAX_SPEED;
+    
+    xSpeed = -joystick.getY() * ModuleConstants.MAX_SPEED;
+    ySpeed = -joystick.getX() * ModuleConstants.MAX_SPEED;
     rot = joystick.getTwist() * Constants.MAX_ANGULAR_SPEED;
 
-    drivetrain.drive(xSpeed, ySpeed, rot);
+    if(Math.abs(xSpeed) < .15) xSpeed = 0;
+    if(Math.abs(ySpeed) < .15) ySpeed = 0;
+    if(Math.abs(rot) < 0.5) rot = 0;
+
+    drivetrain.drive(xSpeed, ySpeed, 0);
+
   }
 
   // Called once the command ends or is interrupted.
