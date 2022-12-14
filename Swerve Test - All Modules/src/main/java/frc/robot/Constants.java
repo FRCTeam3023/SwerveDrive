@@ -5,7 +5,6 @@
 package frc.robot;
 
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.math.util.Units;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -36,10 +35,6 @@ public final class Constants {
         public static final double WHEEL_DIA = 4; //in inches
         public static final double TURN_GEARING = 54;
         public static final double MAX_SPEED = 2; 
-
-        public static final int ENCODER_RESET_ITERATIONS = 500;
-        // only reference the absolute encoder under 1 deg/sec
-        public static final double ENCODER_RESET_MAX_ANGULAR_VELOCITY = Math.PI / 180; 
 
         //module offsets for the zero position for each wheel, in this order
         //Front Left - Front Right - Back Left - Back Right

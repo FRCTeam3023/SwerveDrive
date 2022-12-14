@@ -11,8 +11,6 @@ import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkMaxPIDController;
-import com.revrobotics.CANSparkMax.ControlType;
-import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -31,36 +29,31 @@ public class SwerveModule {
 
     private WPI_TalonFX driveMotor;
     private CANSparkMax turnMotor;
-
+    private double moduleOffset;
+    private DigitalInput hallEffectSensor;
+    public int moduleID;
     private RelativeEncoder turnEncoder;
-
     private SparkMaxPIDController turnPIDController;
 
     private Gains turnGains = new Gains(.8,0,0,0,0,1);
 
     private Gains driveGains = new Gains(0.1,0,0,0.046,0,1);
 
-    // private DigitalInput hallEffectSensor = new DigitalInput(0);
-
-    private double moduleOffset;
-
     private boolean homeStatus = false;
     public boolean homeFinished = false;
-
     private boolean lastState;
 
     private Timer timer = new Timer();
 
-    private DigitalInput hallEffectSensor;
-
-    public int moduleID;
 
     /**
-     * A single swerve module 
+     * A single swerve module object
      * @param moduleID Module number
      * @param driveID CAN ID number for the drive Falcon500 
      * @param turnID CAN ID number for the turning CANSparkMax
      * @param moduleOffset radian offset for the zero position in relation to the hall effect sensor
+     * @param isInverted set true if the drive motor should be inverted. (Preference depending on set module offset)
+     * @param sensorID DIO pin number of the hall effect sensor
      */
 
     public SwerveModule(int moduleID, int driveID, int turnID, double moduleOffset, boolean isInverted, int sensorID){
@@ -115,7 +108,7 @@ public class SwerveModule {
 
         //set up encoder on the NEO
         turnEncoder = turnMotor.getEncoder();
-        turnEncoder.setPositionConversionFactor(2 * Math.PI * (1/ModuleConstants.TURN_GEARING) * 9/8); //changes rotations to Radians
+        turnEncoder.setPositionConversionFactor(2 * Math.PI * (1/ModuleConstants.TURN_GEARING)); //changes rotations to Radians
         turnEncoder.setVelocityConversionFactor(2 * Math.PI * (1/ModuleConstants.TURN_GEARING) / 60 ); //changes rpm to rad/sec
 
 
@@ -130,15 +123,13 @@ public class SwerveModule {
         turnPIDController.setOutputRange(-0.5, 0.5);
 
         turnEncoder.setPosition(0);
-
-        
-
     }
 
     
 
     /**
-     * Set the desired state for the module
+     * Set the desired state for the module. Drive speeds of 0 will result in no movement of module. 
+     * This prevents recentering of module after no joystick input
      * @param desiredState the desired state
      */
     public void setDesiredState(SwerveModuleState desiredState){
@@ -180,10 +171,8 @@ public class SwerveModule {
         //set reference angle to this new adjustment
         turnPIDController.setReference(adjustedReferenceAngleRadians, CANSparkMax.ControlType.kPosition);
 
-        // SmartDashboard.putNumber(moduleID + "Target", adjustedReferenceAngleRadians);
-        // SmartDashboard.putString(moduleID + " Actual", getAngle().toString());
-        SmartDashboard.putNumber(moduleID + " Target", state.speedMetersPerSecond);
-        SmartDashboard.putNumber(moduleID + " Actual", getSpeed());
+        //readout to give turn Error
+        SmartDashboard.putNumber(moduleID + " Error", adjustedReferenceAngleRadians - getAngle().getRadians());
 
     }
 
@@ -219,53 +208,74 @@ public class SwerveModule {
 
 
     /**
-     * 
      * @return state of the hall effect sensor
      */
     public boolean getSwitch(){
         return !hallEffectSensor.get();
-        // return false;
     }
 
+    /**
+     * @return speed of drive motor in meters/second
+     */
     public double getSpeed(){
         return driveMotor.getSelectedSensorVelocity() / Constants.FALCON_UNITS_PER_REV * 10 / ModuleConstants.DRIVE_GEARING * Units.inchesToMeters(ModuleConstants.WHEEL_DIA * Math.PI);
     }
 
+    /**
+     * Angle of module. This is the unbound version raw from encoder
+     * @return angle of module 
+     */
     public Rotation2d getAngle(){
         return new Rotation2d(turnEncoder.getPosition());
     }
 
     /**
-     * Set the home state
+     * Set the home state. Called before homing module
      */
     public void setHomeStatus(boolean state){
         homeStatus = state;
         homeFinished = state;
         lastState = getSwitch();
     }
-    
-    public void setDriveSpeed(double speed){
-        driveMotor.set(ControlMode.PercentOutput, speed);
+
+    /**
+     * Direct control of motor output percent
+     * @param drive drive motor speed
+     * @param turn turn motor speed
+     */
+    public void setMotorSpeeds(double drive, double turn){
+        turnMotor.set(turn);
+        driveMotor.set(drive);
     }
 
-    public void setTurnSpeed(double speed){
-        turnMotor.set(speed);
-    }
-
+    /**
+     * @return state of module 
+     */
     public SwerveModuleState getState(){
         return new SwerveModuleState(getSpeed(), getAngle());
     }
 
+    /**
+     * stop module.
+     * Sets speeds to 0
+     */
     public void stop(){
         driveMotor.set(0);
         turnMotor.set(0);
     }
 
+    /**
+     * Resets the encoder position for both motors
+     */
     public void ZeroEncoders() {
         driveMotor.setSelectedSensorPosition(0);
         turnEncoder.setPosition(0);
     }
     
+    /**
+     * test code for manual movement of steering angle 
+     * @param angle target angle in radians
+     */
     public void setSteerAngle(double angle){
         turnPIDController.setReference(angle, CANSparkMax.ControlType.kPosition);
     }

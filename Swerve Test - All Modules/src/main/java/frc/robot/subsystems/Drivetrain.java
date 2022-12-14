@@ -18,18 +18,18 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.ModuleConstants;
 
 public class Drivetrain extends SubsystemBase {
-  /** Creates a new ExampleSubsystem. */
-
   
   ChassisSpeeds chassisSpeeds = new ChassisSpeeds(0,0,0);
 
   private final ADXRS450_Gyro gyro = new ADXRS450_Gyro(SPI.Port.kOnboardCS0);
 
+  //module objects
   private SwerveModule frontLeft = new SwerveModule(1, 1, 5, ModuleConstants.MODULE1_OFFSET, true, 0); // Module 1
   private SwerveModule frontRight = new SwerveModule(2, 2, 6, ModuleConstants.MODULE2_OFFSET, false, 1); // Module 2
   private SwerveModule backLeft = new SwerveModule(3, 3, 7, ModuleConstants.MODULE3_OFFSET, true, 2); // Module 3
   private SwerveModule backRight = new SwerveModule(4, 4, 8, ModuleConstants.MODULE4_OFFSET, false, 3); // Module 4
 
+  //module positions
   public final Translation2d frontLeftLocation = new Translation2d(0.175,0.175);
   public final Translation2d frontRightLocation = new Translation2d(0.175, -0.175);
   public final Translation2d backLeftLocation = new Translation2d(-0.175,0.175);
@@ -37,7 +37,7 @@ public class Drivetrain extends SubsystemBase {
 
   public final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
 
-
+  //odometer for measuring field position
   private final SwerveDriveOdometry odometer = new SwerveDriveOdometry(kinematics, new Rotation2d(0));
 
   public boolean allModuleHomeStatus = false;
@@ -90,6 +90,10 @@ public class Drivetrain extends SubsystemBase {
 
   }
 
+  /**
+   * Set module states for all of the modules. In an array of states in same order as kinimatics
+   * @param moduleStates list of states
+   */
   public void setModuleStates(SwerveModuleState[] moduleStates){
     //desaturate wheel speeds to under max
     SwerveDriveKinematics.desaturateWheelSpeeds(moduleStates, ModuleConstants.MAX_SPEED);
@@ -101,10 +105,17 @@ public class Drivetrain extends SubsystemBase {
     backRight.setDesiredState(moduleStates[3]);
   }
 
+  /**
+  * @return postion (pose) of bot on field
+  */  
   public Pose2d getPose(){
     return odometer.getPoseMeters();
   }
 
+  /**
+   * Reset odometry to new position on the field. Uses current heading of the bot but changes field pose
+   * @param pose new pose2d
+   */
   public void resetOdometry(Pose2d pose){
     odometer.resetPosition(pose, getChassisAngle());
   }
@@ -137,17 +148,16 @@ public class Drivetrain extends SubsystemBase {
     allModuleHomeStatus = false;
   }
 
-  public void drivePercentage(double speed){
-    frontLeft.setDriveSpeed(speed);
-  }
-  public void steerPercentage(double speed){
-    frontLeft.setTurnSpeed(speed);
-  }
-
+  /**
+   * @return current chassis angle
+   */
   public Rotation2d getChassisAngle(){
     return gyro.getRotation2d();
   }
 
+  /**
+   * Stops all modules
+   */
   public void stopModules() {
     frontLeft.stop();
     frontRight.stop();
@@ -155,6 +165,9 @@ public class Drivetrain extends SubsystemBase {
     backRight.stop();
   }
 
+  /**
+   * Resets encoders for all modules
+   */
   public void ZeroEncoders() {
     frontLeft.ZeroEncoders();
     frontRight.ZeroEncoders();
@@ -162,10 +175,17 @@ public class Drivetrain extends SubsystemBase {
     backRight.ZeroEncoders();
   }
 
+  /**
+   * recalibrates the gyroscope. This takes a significant amount of time so make sure bot is stationary
+   */
   public void calibrateGyro(){
     gyro.calibrate();
   }
 
+  /**
+   * test code for front left module
+   * @param angle target angle radians
+   */
   public void setSteerAngle(double angle){
     frontLeft.setSteerAngle(angle);
   }
