@@ -44,13 +44,13 @@ public class JoystickDrive extends CommandBase {
     
     xSpeed = -joystick.getY() * ModuleConstants.MAX_SPEED;
     ySpeed = -joystick.getX() * ModuleConstants.MAX_SPEED;
-    rot = joystick.getTwist() * Constants.MAX_ANGULAR_SPEED;
+    rot = -joystick.getTwist() * Constants.MAX_ANGULAR_SPEED;
 
     if(Math.abs(xSpeed) < .15) xSpeed = 0;
     if(Math.abs(ySpeed) < .15) ySpeed = 0;
-    if(Math.abs(rot) < 0.5) rot = 0;
+    if(Math.abs(rot) < 0.75) rot = 0;
 
-    drivetrain.drive(xSpeed, ySpeed, 0);
+    drivetrain.drive(xSpeed, ySpeed, rot);
 
   }
 

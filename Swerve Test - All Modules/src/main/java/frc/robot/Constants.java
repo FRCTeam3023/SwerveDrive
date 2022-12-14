@@ -20,7 +20,7 @@ public final class Constants {
     //Max radians/sec that the bot will rotate at
     public static final double MAX_ANGULAR_SPEED = 4;
     //acceleration of rotation, rad/sec^2
-    public static final double MAX_ANGULAR_ACCELERATION = 4;
+    public static final double MAX_ANGULAR_ACCELERATION = 8;
 
     
     
@@ -46,7 +46,7 @@ public final class Constants {
         public static final double MODULE1_OFFSET = -3 * Math.PI/4;
         public static final double MODULE2_OFFSET = 3 * Math.PI/4;
         public static final double MODULE3_OFFSET = 3 * Math.PI/4;
-        public static final double MODULE4_OFFSET = 0;
+        public static final double MODULE4_OFFSET = -3 * Math.PI/4;
 
 
 
@@ -58,9 +58,9 @@ public final class Constants {
         public static final double MAX_ACCELERATION = 1;
         public static final double MAX_SPEED = 1;
 
-        public static final double X_CONTROLLER = 0;
-        public static final double Y_CONTROLLER = 0;
-        public static final double THETA_CONTROLLER = 0;
+        public static final double X_CONTROLLER = 2;
+        public static final double Y_CONTROLLER = 2;
+        public static final double THETA_CONTROLLER = 2;
         public final TrapezoidProfile.Constraints THETA_CONTROLLER_CONSTRAINTS = 
             new TrapezoidProfile.Constraints(
                 MAX_ANGULAR_SPEED, 

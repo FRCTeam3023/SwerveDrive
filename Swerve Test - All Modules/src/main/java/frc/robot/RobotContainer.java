@@ -11,6 +11,7 @@ import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
@@ -26,7 +27,9 @@ import frc.robot.commands.ZeroEncoders;
 import frc.robot.subsystems.Drivetrain;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 
@@ -66,6 +69,16 @@ public class RobotContainer {
     homeButton.whenHeld(new HomeCommand(drivetrain));
     driveButton.whileHeld(new DriveConstantPercentage(drivetrain));
     zeroButton.whenPressed(new ZeroEncoders(drivetrain));
+
+    new JoystickButton(mainJoystick, 2).whenPressed(new InstantCommand(() -> drivetrain.calibrateGyro()));
+
+    new JoystickButton(mainJoystick, 11).whenHeld(
+      new StartEndCommand(() -> drivetrain.setSteerAngle(16 * Math.PI), () -> drivetrain.stopModules(), drivetrain)
+    );
+
+    new JoystickButton(mainJoystick, 12).whenHeld(
+      new StartEndCommand(() -> drivetrain.setSteerAngle(0), () -> drivetrain.stopModules(), drivetrain)
+    );
     
 
   }
@@ -81,15 +94,25 @@ public class RobotContainer {
     TrajectoryConfig config = new TrajectoryConfig(AutoConstants.MAX_SPEED, AutoConstants.MAX_ACCELERATION)
                                         .setKinematics(drivetrain.kinematics);
 
-    Trajectory trajectory = TrajectoryGenerator.generateTrajectory(
+    Trajectory trajectory1 = TrajectoryGenerator.generateTrajectory(
       new Pose2d(0,0, new Rotation2d(0)),
       List.of(
-          new Translation2d(0.5,0),
-          new Translation2d(0.5,-0.5)
+          new Translation2d(1,0)
       ),
-      new Pose2d(1,-0.5,Rotation2d.fromDegrees(180)), 
+      new Pose2d(2,0,Rotation2d.fromDegrees(0)), 
       config
     );
+
+    Trajectory trajectory2 = TrajectoryGenerator.generateTrajectory(
+      new Pose2d(2,0,Rotation2d.fromDegrees(180)),
+      List.of(
+        new Translation2d(1, 0)
+      ),
+      new Pose2d(0,0, new Rotation2d().fromDegrees(180)), 
+      config
+    );
+
+    Trajectory trajectory = trajectory1.concatenate(trajectory2);
 
     PIDController xController = new PIDController(AutoConstants.X_CONTROLLER, 0, 0);
     PIDController yController = new PIDController(AutoConstants.Y_CONTROLLER, 0, 0);
@@ -97,20 +120,25 @@ public class RobotContainer {
           new TrapezoidProfile.Constraints(Constants.MAX_ANGULAR_SPEED, Constants.MAX_ANGULAR_ACCELERATION) );
     thetaController.enableContinuousInput(-Math.PI, Math.PI);
 
-    SwerveControllerCommand swerveControllerCommand = new SwerveControllerCommand(
+    SwerveControllerCommand swerveControllerCommand1 = new SwerveControllerCommand(
       trajectory, 
       drivetrain::getPose, 
       drivetrain.kinematics, 
       xController, 
       yController, 
       thetaController, 
+      this::getAngle,
       drivetrain::setModuleStates, 
       drivetrain);
 
     return new SequentialCommandGroup(
-      new InstantCommand(() -> drivetrain.resetOdometry(trajectory.getInitialPose())),
-      swerveControllerCommand,
+      new InstantCommand(() -> drivetrain.resetOdometry(trajectory1.getInitialPose())),
+      swerveControllerCommand1,
       new InstantCommand(() -> drivetrain.stopModules())
     );
+  }
+
+  private Rotation2d getAngle(){
+    return new Rotation2d(2*Math.PI);
   }
 }

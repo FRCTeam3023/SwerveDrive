@@ -11,6 +11,7 @@ import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkMaxPIDController;
+import com.revrobotics.CANSparkMax.ControlType;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
@@ -52,6 +53,8 @@ public class SwerveModule {
 
     private DigitalInput hallEffectSensor;
 
+    public int moduleID;
+
     /**
      * A single swerve module 
      * @param moduleID Module number
@@ -63,6 +66,7 @@ public class SwerveModule {
     public SwerveModule(int moduleID, int driveID, int turnID, double moduleOffset, boolean isInverted, int sensorID){
 
         this.moduleOffset = moduleOffset;
+        this.moduleID = moduleID;
 
         hallEffectSensor = new DigitalInput(sensorID);
 
@@ -108,9 +112,10 @@ public class SwerveModule {
         turnMotor.setClosedLoopRampRate(0.3);
 
 
+
         //set up encoder on the NEO
         turnEncoder = turnMotor.getEncoder();
-        turnEncoder.setPositionConversionFactor(2 * Math.PI * (1/ModuleConstants.TURN_GEARING)); //changes rotations to Radians
+        turnEncoder.setPositionConversionFactor(2 * Math.PI * (1/ModuleConstants.TURN_GEARING) * 9/8); //changes rotations to Radians
         turnEncoder.setVelocityConversionFactor(2 * Math.PI * (1/ModuleConstants.TURN_GEARING) / 60 ); //changes rpm to rad/sec
 
 
@@ -121,6 +126,8 @@ public class SwerveModule {
         turnPIDController.setFF(turnGains.kF);
         turnPIDController.setIZone(turnGains.kIzone);
         turnPIDController.setOutputRange(-turnGains.kPeakOutput, turnGains.kPeakOutput);
+
+        turnPIDController.setOutputRange(-0.5, 0.5);
 
         turnEncoder.setPosition(0);
 
@@ -172,6 +179,11 @@ public class SwerveModule {
 
         //set reference angle to this new adjustment
         turnPIDController.setReference(adjustedReferenceAngleRadians, CANSparkMax.ControlType.kPosition);
+
+        // SmartDashboard.putNumber(moduleID + "Target", adjustedReferenceAngleRadians);
+        // SmartDashboard.putString(moduleID + " Actual", getAngle().toString());
+        SmartDashboard.putNumber(moduleID + " Target", state.speedMetersPerSecond);
+        SmartDashboard.putNumber(moduleID + " Actual", getSpeed());
 
     }
 
@@ -253,5 +265,8 @@ public class SwerveModule {
         driveMotor.setSelectedSensorPosition(0);
         turnEncoder.setPosition(0);
     }
-
+    
+    public void setSteerAngle(double angle){
+        turnPIDController.setReference(angle, CANSparkMax.ControlType.kPosition);
+    }
 }

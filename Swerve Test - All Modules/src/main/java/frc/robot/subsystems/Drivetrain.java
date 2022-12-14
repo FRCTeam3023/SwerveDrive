@@ -43,7 +43,7 @@ public class Drivetrain extends SubsystemBase {
   public boolean allModuleHomeStatus = false;
 
   public Drivetrain() {
-    gyro.calibrate();
+    calibrateGyro();
   }
 
   @Override
@@ -59,6 +59,9 @@ public class Drivetrain extends SubsystemBase {
 
     SmartDashboard.putNumber("Bot Heading", getChassisAngle().getDegrees());
     SmartDashboard.putString("Bot Position", getPose().getTranslation().toString());
+
+    SmartDashboard.putString("Module1 Angle", frontLeft.getAngle().toString());
+    SmartDashboard.putString("Module1 Setpoint", frontLeft.getState().angle.toString());
 
   }
 
@@ -115,9 +118,10 @@ public class Drivetrain extends SubsystemBase {
     frontLeft.home();
     frontRight.home();
     backLeft.home();
+    backRight.home();
 
     //if all modules are done then change variable state to true
-    allModuleHomeStatus = frontLeft.homeFinished && frontRight.homeFinished && backLeft.homeFinished;
+    allModuleHomeStatus = frontLeft.homeFinished && frontRight.homeFinished && backLeft.homeFinished && backRight.homeFinished;
 
   }
 
@@ -156,6 +160,14 @@ public class Drivetrain extends SubsystemBase {
     frontRight.ZeroEncoders();
     backLeft.ZeroEncoders();
     backRight.ZeroEncoders();
+  }
+
+  public void calibrateGyro(){
+    gyro.calibrate();
+  }
+
+  public void setSteerAngle(double angle){
+    frontLeft.setSteerAngle(angle);
   }
 
 
