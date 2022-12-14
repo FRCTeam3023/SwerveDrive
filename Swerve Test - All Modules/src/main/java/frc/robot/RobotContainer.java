@@ -151,6 +151,7 @@ public class RobotContainer {
       new InstantCommand(() -> drivetrain.resetOdometry(trajectory1.getInitialPose())),
       new InstantCommand(timer::start),
       swerveControllerCommand1,
+      new InstantCommand(timer::stop),
       new InstantCommand(() -> drivetrain.stopModules())
     );
   }
