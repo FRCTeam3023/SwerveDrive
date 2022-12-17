@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 
 import edu.wpi.first.math.controller.PIDController;
@@ -14,7 +16,10 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
+import edu.wpi.first.math.trajectory.TrajectoryUtil;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
@@ -45,6 +50,9 @@ public class RobotContainer {
   
   private final JoystickDrive joystickDrive = new JoystickDrive(drivetrain, mainJoystick);
 
+  String trajectoryJSON = "paths/Forward-1.wpilib.json";
+  Trajectory trajectory = new Trajectory();
+
   Timer timer = new Timer(); // for auto
 
 
@@ -52,6 +60,14 @@ public class RobotContainer {
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     drivetrain.setDefaultCommand(joystickDrive);
+
+    try {
+      Path trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve(trajectoryJSON);
+      trajectory = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
+    } catch (IOException ex) {
+      DriverStation.reportError("Unable to open trajectory: " + trajectoryJSON, ex.getStackTrace());
+    }
+
     // Configure the button bindings
     configureButtonBindings();
   }
@@ -68,9 +84,10 @@ public class RobotContainer {
      * 
      * 
      * 1: Home all modules
-     * 10: Recalibrate Gyro
+     * 7: Recalibrate Gyro
+     * 10: Module 1 - 0 turns
      * 11: Module 1 - 4 turns
-     * 12: Module 1 - 0 turns
+     * 12: Module 1 - 8 turns
      * 
      * 
      * 
@@ -80,15 +97,19 @@ public class RobotContainer {
     new JoystickButton(mainJoystick, 1).whenHeld(new HomeCommand(drivetrain));
 
     //zero Gyro angle, counter drift during testing. Hopefully get a better gyro soon  (Will make a loop overrun warning)
-    new JoystickButton(mainJoystick, 10).whenPressed(new InstantCommand(() -> drivetrain.calibrateGyro()));
+    new JoystickButton(mainJoystick, 7).whenPressed(new InstantCommand(() -> drivetrain.calibrateGyro()));
 
-    //test of module steering accuracy, turn 4 rotations, and back to 0
-    new JoystickButton(mainJoystick, 11).whenHeld(
-      new RunCommand(() -> drivetrain.setSteerAngle(16 * Math.PI), drivetrain)
-    );
-    new JoystickButton(mainJoystick, 12).whenHeld(
+    //test of module steering accuracy, turn 0,4,8 rotations
+    new JoystickButton(mainJoystick, 10).whenHeld(
       new RunCommand(() -> drivetrain.setSteerAngle(0), drivetrain)
     );
+    new JoystickButton(mainJoystick, 11).whenHeld(
+      new RunCommand(() -> drivetrain.setSteerAngle(8 * Math.PI), drivetrain)
+    );
+    new JoystickButton(mainJoystick, 12).whenHeld(
+      new RunCommand(() -> drivetrain.setSteerAngle(16 * Math.PI), drivetrain)
+    );
+    
     
 
   }
@@ -104,27 +125,33 @@ public class RobotContainer {
     TrajectoryConfig config = new TrajectoryConfig(AutoConstants.MAX_SPEED, AutoConstants.MAX_ACCELERATION)
                                         .setKinematics(drivetrain.kinematics);
 
+    TrajectoryConfig config2 = new TrajectoryConfig(AutoConstants.MAX_SPEED, AutoConstants.MAX_ACCELERATION)
+                                        .setKinematics(drivetrain.kinematics)
+                                        .setReversed(true);
+                                        
+
     //creation of both trajectories 
     Trajectory trajectory1 = TrajectoryGenerator.generateTrajectory(
       new Pose2d(0,0, new Rotation2d(0)),
       List.of(
-        new Translation2d(1,0)
+        new Translation2d(1,0),
+        new Translation2d(1,-1)
       ),
-      new Pose2d(2,0,Rotation2d.fromDegrees(0)), 
+      new Pose2d(2,-1,Rotation2d.fromDegrees(0)), 
       config
     );
 
     Trajectory trajectory2 = TrajectoryGenerator.generateTrajectory(
-      new Pose2d(2,0,Rotation2d.fromDegrees(180)),
+      new Pose2d(2,-1,Rotation2d.fromDegrees(0)),
       List.of(
         new Translation2d(1, 0)
       ),
-      new Pose2d(0,0, Rotation2d.fromDegrees(180)), 
-      config
+      new Pose2d(0,0, Rotation2d.fromDegrees(0)), 
+      config2
     );
 
     //combining the two trajectories 
-    Trajectory trajectory = trajectory1.concatenate(trajectory2);
+    Trajectory trajectory3 = trajectory1.concatenate(trajectory2);
 
     //Pid controllers to correct for error in positioning during autonomous x,y,theta
     PIDController xController = new PIDController(AutoConstants.X_CONTROLLER, 0, 0);
@@ -135,19 +162,20 @@ public class RobotContainer {
 
     //new swerve controller command. Uses the custom angle setpoint
     SwerveControllerCommand swerveControllerCommand1 = new SwerveControllerCommand(
-      trajectory, 
+      trajectory3, 
       drivetrain::getPose, 
       drivetrain.kinematics, 
       xController, 
       yController, 
       thetaController, 
-      () -> getAngle(timer.get()),
+      () -> getAngle(timer.get(), trajectory1.getTotalTimeSeconds(), trajectory2.getTotalTimeSeconds(), trajectory.getTotalTimeSeconds()),
       drivetrain::setModuleStates, 
       drivetrain);
 
       timer.reset();
 
     return new SequentialCommandGroup(
+      new HomeCommand(drivetrain),
       new InstantCommand(() -> drivetrain.resetOdometry(trajectory1.getInitialPose())),
       new InstantCommand(timer::start),
       swerveControllerCommand1,
@@ -157,14 +185,17 @@ public class RobotContainer {
   }
 
   //returns custom angle setpoint for autonomous
-  private Rotation2d getAngle(double time){
+  private Rotation2d getAngle(double currentTime, double time1, double time2, double totalTime){
     //have some function in relation to time
     Rotation2d setpoint;
-    if(time < 2){
-      setpoint = Rotation2d.fromDegrees(90);
-    } else {
+    if(currentTime < time1 && currentTime >= 0.5){
       setpoint = Rotation2d.fromDegrees(180);
+    } else if(currentTime >= time1 && currentTime <= totalTime){
+      setpoint = Rotation2d.fromDegrees(0);
+    } else {
+      setpoint = Rotation2d.fromDegrees(0);
     }
+
 
     return setpoint;
   }

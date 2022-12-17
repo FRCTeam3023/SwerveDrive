@@ -1,9 +1,9 @@
 {
   "lengthUnit": "Meter",
   "exportUnit": "Always Meters",
-  "maxVelocity": 3.0,
-  "maxAcceleration": 2.0,
-  "trackWidth": 1.0,
+  "maxVelocity": 2.0,
+  "maxAcceleration": 1.0,
+  "trackWidth": 0.0,
   "gameName": "Rapid React",
-  "outputDir": ""
+  "outputDir": "../Swerve Test - All Modules"
 }

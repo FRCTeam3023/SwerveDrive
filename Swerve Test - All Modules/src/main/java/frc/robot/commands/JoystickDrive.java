@@ -49,7 +49,7 @@ public class JoystickDrive extends CommandBase {
     if(Math.abs(ySpeed) < .15) ySpeed = 0;
     if(Math.abs(rot) < 0.75) rot = 0;
 
-    drivetrain.drive(xSpeed, ySpeed, rot);
+    drivetrain.drive(xSpeed, ySpeed, rot, true);
 
   }
 

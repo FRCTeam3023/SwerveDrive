@@ -33,7 +33,7 @@ public final class Constants {
     public final class ModuleConstants {
         public static final int DRIVE_GEARING = 7; 
         public static final double WHEEL_DIA = 4; //in inches
-        public static final double TURN_GEARING = 54;
+        public static final double TURN_GEARING = 2.89 * 2.89 * 6;
         public static final double MAX_SPEED = 2; 
 
         //module offsets for the zero position for each wheel, in this order
@@ -51,11 +51,11 @@ public final class Constants {
 
     public final class AutoConstants {
         public static final double MAX_ACCELERATION = 1;
-        public static final double MAX_SPEED = 1;
+        public static final double MAX_SPEED = 2;
 
         public static final double X_CONTROLLER = 2;
         public static final double Y_CONTROLLER = 2;
-        public static final double THETA_CONTROLLER = 2;
+        public static final double THETA_CONTROLLER = 2.5;
         public final TrapezoidProfile.Constraints THETA_CONTROLLER_CONSTRAINTS = 
             new TrapezoidProfile.Constraints(
                 MAX_ANGULAR_SPEED, 

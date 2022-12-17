@@ -71,17 +71,24 @@ public class Drivetrain extends SubsystemBase {
   }
 
   /**
-   * Drive the bot using joystick input
+   * Drive the bot using joystick input.
+   * Positive x is forward, y - left, rot - CC rotation
+   * 
    * 
    * @param xSpeed m/s speed positive away from drive station
    * @param ySpeed m/s speed positive left of drive station
    * @param rot angular rate of bot CCW in radians
+   * @param isFieldRelative if bot should be in field relative control
    */
-  public void drive(double xSpeed, double ySpeed, double rot){
+  public void drive(double xSpeed, double ySpeed, double rot, boolean isFieldRelative){
 
+    //field relative or not, forward always away from drive station
+    if(isFieldRelative){
+      chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, getChassisAngle());
+    } else {
+      chassisSpeeds = new ChassisSpeeds(xSpeed,ySpeed,rot);
+    }
 
-    //positive x is forward, y - left, rot - CC rotation
-    chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, getChassisAngle());
     
     // Convert to module states
     SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(chassisSpeeds);
