@@ -4,36 +4,27 @@
 
 package frc.robot;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
 
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.math.trajectory.TrajectoryConfig;
-import edu.wpi.first.math.trajectory.TrajectoryGenerator;
-import edu.wpi.first.math.trajectory.TrajectoryUtil;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Filesystem;
+import com.pathplanner.lib.PathConstraints;
+import com.pathplanner.lib.PathPlanner;
+import com.pathplanner.lib.PathPlannerTrajectory;
+import com.pathplanner.lib.auto.PIDConstants;
+import com.pathplanner.lib.auto.SwerveAutoBuilder;
+import com.pathplanner.lib.server.PathPlannerServer;
+
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
-import frc.robot.Constants.AutoConstants;
-import frc.robot.commands.HomeCommand;
-import frc.robot.commands.JoystickDrive;
-import frc.robot.subsystems.Drivetrain;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-import edu.wpi.first.wpilibj.Timer;
+import frc.robot.commands.HomeCommand;
+import frc.robot.commands.JoystickDrive;
+import frc.robot.subsystems.Drivetrain;
 
 
 /**
@@ -50,23 +41,31 @@ public class RobotContainer {
   
   private final JoystickDrive joystickDrive = new JoystickDrive(drivetrain, mainJoystick);
 
-  String trajectoryJSON = "paths/Forward-1.wpilib.json";
-  Trajectory trajectory = new Trajectory();
+  // This will load the file "Simple Path.path" and generate it with a max velocity of 2 m/s and a max acceleration of 1 m/s^2
+  // for every path in the group
+  ArrayList<PathPlannerTrajectory> pathGroup = PathPlanner.loadPathGroup("Simple Path", new PathConstraints(3, 1.5));
 
-  Timer timer = new Timer(); // for auto
+  // This is just an example event map. It would be better to have a constant, global event map
+  // in your code that will be used by all path following commands.
+  HashMap<String, Command> eventMap = new HashMap<>();
 
+  // Create the AutoBuilder. This only needs to be created once when robot code starts, not every time you want to create an auto command. A good place to put this is in RobotContainer along with your subsystems.
+  SwerveAutoBuilder autoBuilder = new SwerveAutoBuilder(
+    drivetrain::getPose, // Pose2d supplier
+    drivetrain::resetOdometry, // Pose2d consumer, used to reset odometry at the beginning of auto
+    drivetrain.kinematics, // SwerveDriveKinematics
+    new PIDConstants(4, 0.0, 0.0), // PID constants to correct for translation error (used to create the X and Y PID controllers)
+    new PIDConstants(4, 0.0, 0.0), // PID constants to correct for rotation error (used to create the rotation controller)
+    drivetrain::setModuleStates, // Module states consumer used to output to the drive subsystem
+    eventMap,
+    drivetrain // The drive subsystem. Used to properly set the requirements of path following commands
+  );
 
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    PathPlannerServer.startServer(5811);
     drivetrain.setDefaultCommand(joystickDrive);
-
-    try {
-      Path trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve(trajectoryJSON);
-      trajectory = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
-    } catch (IOException ex) {
-      DriverStation.reportError("Unable to open trajectory: " + trajectoryJSON, ex.getStackTrace());
-    }
 
     // Configure the button bindings
     configureButtonBindings();
@@ -120,83 +119,14 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // An ExampleCommand will run in autonomous
 
-    TrajectoryConfig config = new TrajectoryConfig(AutoConstants.MAX_SPEED, AutoConstants.MAX_ACCELERATION)
-                                        .setKinematics(drivetrain.kinematics);
-
-    TrajectoryConfig config2 = new TrajectoryConfig(AutoConstants.MAX_SPEED, AutoConstants.MAX_ACCELERATION)
-                                        .setKinematics(drivetrain.kinematics)
-                                        .setReversed(true);
-                                        
-
-    //creation of both trajectories 
-    Trajectory trajectory1 = TrajectoryGenerator.generateTrajectory(
-      new Pose2d(0,0, new Rotation2d(0)),
-      List.of(
-        new Translation2d(1,0),
-        new Translation2d(1,-1)
-      ),
-      new Pose2d(2,-1,Rotation2d.fromDegrees(0)), 
-      config
-    );
-
-    Trajectory trajectory2 = TrajectoryGenerator.generateTrajectory(
-      new Pose2d(2,-1,Rotation2d.fromDegrees(0)),
-      List.of(
-        new Translation2d(1, 0)
-      ),
-      new Pose2d(0,0, Rotation2d.fromDegrees(0)), 
-      config2
-    );
-
-    //combining the two trajectories 
-    Trajectory trajectory3 = trajectory1.concatenate(trajectory2);
-
-    //Pid controllers to correct for error in positioning during autonomous x,y,theta
-    PIDController xController = new PIDController(AutoConstants.X_CONTROLLER, 0, 0);
-    PIDController yController = new PIDController(AutoConstants.Y_CONTROLLER, 0, 0);
-    ProfiledPIDController thetaController = new ProfiledPIDController(AutoConstants.THETA_CONTROLLER, 0, 0,
-          new TrapezoidProfile.Constraints(Constants.MAX_ANGULAR_SPEED, Constants.MAX_ANGULAR_ACCELERATION) );
-    thetaController.enableContinuousInput(-Math.PI, Math.PI);
-
-    //new swerve controller command. Uses the custom angle setpoint
-    SwerveControllerCommand swerveControllerCommand1 = new SwerveControllerCommand(
-      trajectory3, 
-      drivetrain::getPose, 
-      drivetrain.kinematics, 
-      xController, 
-      yController, 
-      thetaController, 
-      () -> getAngle(timer.get(), trajectory1.getTotalTimeSeconds(), trajectory2.getTotalTimeSeconds(), trajectory.getTotalTimeSeconds()),
-      drivetrain::setModuleStates, 
-      drivetrain);
-
-      timer.reset();
+      Command fullAuto = autoBuilder.fullAuto(pathGroup);
 
     return new SequentialCommandGroup(
       new HomeCommand(drivetrain),
-      new InstantCommand(() -> drivetrain.resetOdometry(trajectory1.getInitialPose())),
-      new InstantCommand(timer::start),
-      swerveControllerCommand1,
-      new InstantCommand(timer::stop),
-      new InstantCommand(() -> drivetrain.stopModules())
+      fullAuto
     );
   }
 
-  //returns custom angle setpoint for autonomous
-  private Rotation2d getAngle(double currentTime, double time1, double time2, double totalTime){
-    //have some function in relation to time
-    Rotation2d setpoint;
-    if(currentTime < time1 && currentTime >= 0.5){
-      setpoint = Rotation2d.fromDegrees(180);
-    } else if(currentTime >= time1 && currentTime <= totalTime){
-      setpoint = Rotation2d.fromDegrees(0);
-    } else {
-      setpoint = Rotation2d.fromDegrees(0);
-    }
-
-
-    return setpoint;
-  }
+  
 }
