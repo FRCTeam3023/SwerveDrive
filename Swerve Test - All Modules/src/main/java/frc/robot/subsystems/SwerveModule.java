@@ -38,7 +38,7 @@ public class SwerveModule {
     private Gains turnGains = new Gains(.8,0,0,0,0,1);
 
 
-    private Gains driveGains = new Gains(0.1,0,0,0.046,0,1);
+    private Gains driveGains = new Gains(0.05,0,0,0.046,0,1);
 
     private boolean homeStatus = false;
     public boolean homeFinished = false;
@@ -171,9 +171,6 @@ public class SwerveModule {
 
         //set reference angle to this new adjustment
         turnPIDController.setReference(adjustedReferenceAngleRadians, CANSparkMax.ControlType.kPosition);
-
-        //readout to give turn Error
-        SmartDashboard.putNumber(moduleID + " Error", adjustedReferenceAngleRadians - getAngle().getRadians());
 
     }
 

@@ -4,7 +4,12 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.math.util.Units;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -60,6 +65,20 @@ public final class Constants {
             new TrapezoidProfile.Constraints(
                 MAX_ANGULAR_SPEED, 
                 MAX_ANGULAR_ACCELERATION);
+    }
+
+    public static class PhotonConstants {
+        public final static double CAM_PITCH = 15; //degrees
+
+        public final static Transform3d CAMERA_TO_ROBOT = 
+            new Transform3d(
+                new Translation3d(-Units.inchesToMeters(21/2), 0, -Units.inchesToMeters(6)), 
+                new Rotation3d(Units.degreesToRadians(CAM_PITCH),0,0)
+            );
+
+        public static final Transform3d ROBOT_TO_CAMERA = CAMERA_TO_ROBOT.inverse();
+
+        public static final Pose3d TARGET_POSE = new Pose3d(0, 0, Units.inchesToMeters(24), new Rotation3d());
     }
 
 }

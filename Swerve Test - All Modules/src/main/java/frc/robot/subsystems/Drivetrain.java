@@ -4,6 +4,9 @@
 
 package frc.robot.subsystems;
 
+import edu.wpi.first.math.MatBuilder;
+import edu.wpi.first.math.Nat;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -42,6 +45,13 @@ public class Drivetrain extends SubsystemBase {
 
   public boolean allModuleHomeStatus = false;
 
+  SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
+    getChassisAngle(), new Pose2d(), kinematics,
+    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.02,0.02,0.02), 
+    new MatBuilder<>(Nat.N1(), Nat.N1()).fill(0.02), 
+    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.1,0.1,0.1),
+    0.02);
+
   public Drivetrain() {
     calibrateGyro();
   }
@@ -59,9 +69,6 @@ public class Drivetrain extends SubsystemBase {
 
     SmartDashboard.putNumber("Bot Heading", getChassisAngle().getDegrees());
     SmartDashboard.putString("Bot Position", getPose().getTranslation().toString());
-
-    SmartDashboard.putString("Module1 Angle", frontLeft.getAngle().toString());
-    SmartDashboard.putString("Module1 Setpoint", frontLeft.getState().angle.toString());
 
   }
 

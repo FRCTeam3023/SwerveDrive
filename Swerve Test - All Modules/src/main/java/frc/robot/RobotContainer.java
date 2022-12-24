@@ -24,7 +24,9 @@ import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.commands.HomeCommand;
 import frc.robot.commands.JoystickDrive;
+import frc.robot.commands.TrackCommand;
 import frc.robot.subsystems.Drivetrain;
+import frc.robot.subsystems.PhotonSubsystem;
 
 
 /**
@@ -36,6 +38,7 @@ import frc.robot.subsystems.Drivetrain;
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   private final Drivetrain drivetrain = new Drivetrain();
+  private final PhotonSubsystem photonSubsystem = new PhotonSubsystem();
 
   private final Joystick mainJoystick = new Joystick(1);
   
@@ -83,6 +86,7 @@ public class RobotContainer {
      * 
      * 
      * 1: Home all modules
+     * 2: Track Command
      * 7: Recalibrate Gyro
      * 10: Module 1 - 0 turns
      * 11: Module 1 - 4 turns
@@ -94,6 +98,11 @@ public class RobotContainer {
 
 
     new JoystickButton(mainJoystick, 1).whenHeld(new HomeCommand(drivetrain));
+
+    
+    new JoystickButton(mainJoystick, 2).whenHeld(
+      new TrackCommand(photonSubsystem, drivetrain)
+    );
 
     //zero Gyro angle, counter drift during testing. Hopefully get a better gyro soon  (Will make a loop overrun warning)
     new JoystickButton(mainJoystick, 7).whenPressed(new InstantCommand(() -> drivetrain.calibrateGyro()));
@@ -108,6 +117,7 @@ public class RobotContainer {
     new JoystickButton(mainJoystick, 12).whenHeld(
       new RunCommand(() -> drivetrain.setSteerAngle(16 * Math.PI), drivetrain)
     );
+
     
     
 
@@ -120,11 +130,16 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
 
-      Command fullAuto = autoBuilder.fullAuto(pathGroup);
+    //   Command fullAuto = autoBuilder.fullAuto(pathGroup);
+
+    // return new SequentialCommandGroup(
+    //   new HomeCommand(drivetrain),
+    //   fullAuto
+    // );
 
     return new SequentialCommandGroup(
       new HomeCommand(drivetrain),
-      fullAuto
+      new TrackCommand(photonSubsystem, drivetrain)
     );
   }
 
