@@ -4,6 +4,8 @@
 
 package frc.robot.subsystems;
 
+import java.util.List;
+
 import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -41,16 +43,10 @@ public class Drivetrain extends SubsystemBase {
   public final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
 
   //odometer for measuring field position
-  private final SwerveDriveOdometry odometer = new SwerveDriveOdometry(kinematics, new Rotation2d(0));
+  // private final SwerveDriveOdometry odometer = new SwerveDriveOdometry(kinematics, new Rotation2d(0));
 
   public boolean allModuleHomeStatus = false;
 
-  SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
-    getChassisAngle(), new Pose2d(), kinematics,
-    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.02,0.02,0.02), 
-    new MatBuilder<>(Nat.N1(), Nat.N1()).fill(0.02), 
-    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.1,0.1,0.1),
-    0.02);
 
   public Drivetrain() {
     calibrateGyro();
@@ -59,7 +55,7 @@ public class Drivetrain extends SubsystemBase {
   @Override
   public void periodic() {
 
-    odometer.update(getChassisAngle(), frontLeft.getState(), frontRight.getState(), backLeft.getState(), backRight.getState());
+    // odometer.update(getChassisAngle(), frontLeft.getState(), frontRight.getState(), backLeft.getState(), backRight.getState());
 
     // This method will be called once per scheduler run
     SmartDashboard.putBoolean("1 Homed", frontLeft.homeFinished);
@@ -68,7 +64,6 @@ public class Drivetrain extends SubsystemBase {
     SmartDashboard.putBoolean("4 Homed", backRight.homeFinished);
 
     SmartDashboard.putNumber("Bot Heading", getChassisAngle().getDegrees());
-    SmartDashboard.putString("Bot Position", getPose().getTranslation().toString());
 
   }
 
@@ -119,20 +114,30 @@ public class Drivetrain extends SubsystemBase {
     backRight.setDesiredState(moduleStates[3]);
   }
 
-  /**
-  * @return postion (pose) of bot on field
-  */  
-  public Pose2d getPose(){
-    return odometer.getPoseMeters();
+  public SwerveModuleState[] getModuleStates(){
+    SwerveModuleState[] states = {
+      frontLeft.getState(),
+      frontRight.getState(),
+      backLeft.getState(),
+      backRight.getState()
+    };
+    return states;
   }
 
-  /**
-   * Reset odometry to new position on the field. Uses current heading of the bot but changes field pose
-   * @param pose new pose2d
-   */
-  public void resetOdometry(Pose2d pose){
-    odometer.resetPosition(pose, getChassisAngle());
-  }
+  // /**
+  // * @return postion (pose) of bot on field
+  // */  
+  // public Pose2d getPose(){
+  //   return odometer.getPoseMeters();
+  // }
+
+  // /**
+  //  * Reset odometry to new position on the field. Uses current heading of the bot but changes field pose
+  //  * @param pose new pose2d
+  //  */
+  // public void resetOdometry(Pose2d pose){
+  //   odometer.resetPosition(pose, getChassisAngle());
+  // }
 
 
   /**

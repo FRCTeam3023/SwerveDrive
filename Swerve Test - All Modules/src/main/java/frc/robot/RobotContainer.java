@@ -14,6 +14,8 @@ import com.pathplanner.lib.auto.PIDConstants;
 import com.pathplanner.lib.auto.SwerveAutoBuilder;
 import com.pathplanner.lib.server.PathPlannerServer;
 
+import org.photonvision.PhotonCamera;
+
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
@@ -22,11 +24,11 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
+import frc.robot.commands.AlignToTarget;
 import frc.robot.commands.HomeCommand;
 import frc.robot.commands.JoystickDrive;
-import frc.robot.commands.TrackCommand;
 import frc.robot.subsystems.Drivetrain;
-import frc.robot.subsystems.PhotonSubsystem;
+import frc.robot.subsystems.PoseEstimatorSubsystem;
 
 
 /**
@@ -37,12 +39,15 @@ import frc.robot.subsystems.PhotonSubsystem;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
+  private final PhotonCamera camera = new PhotonCamera("visionCamera");
+
   private final Drivetrain drivetrain = new Drivetrain();
-  private final PhotonSubsystem photonSubsystem = new PhotonSubsystem();
+  private final PoseEstimatorSubsystem poseEstimatorSubsystem = new PoseEstimatorSubsystem(drivetrain, camera);
 
   private final Joystick mainJoystick = new Joystick(1);
   
   private final JoystickDrive joystickDrive = new JoystickDrive(drivetrain, mainJoystick);
+
 
   // This will load the file "Simple Path.path" and generate it with a max velocity of 2 m/s and a max acceleration of 1 m/s^2
   // for every path in the group
@@ -54,8 +59,8 @@ public class RobotContainer {
 
   // Create the AutoBuilder. This only needs to be created once when robot code starts, not every time you want to create an auto command. A good place to put this is in RobotContainer along with your subsystems.
   SwerveAutoBuilder autoBuilder = new SwerveAutoBuilder(
-    drivetrain::getPose, // Pose2d supplier
-    drivetrain::resetOdometry, // Pose2d consumer, used to reset odometry at the beginning of auto
+    poseEstimatorSubsystem::getRobotPose, // Pose2d supplier
+    poseEstimatorSubsystem::setCurrentPose, // Pose2d consumer, used to reset odometry at the beginning of auto
     drivetrain.kinematics, // SwerveDriveKinematics
     new PIDConstants(4, 0.0, 0.0), // PID constants to correct for translation error (used to create the X and Y PID controllers)
     new PIDConstants(4, 0.0, 0.0), // PID constants to correct for rotation error (used to create the rotation controller)
@@ -86,7 +91,7 @@ public class RobotContainer {
      * 
      * 
      * 1: Home all modules
-     * 2: Track Command
+     * 2: Align to Target
      * 7: Recalibrate Gyro
      * 10: Module 1 - 0 turns
      * 11: Module 1 - 4 turns
@@ -101,7 +106,7 @@ public class RobotContainer {
 
     
     new JoystickButton(mainJoystick, 2).whenHeld(
-      new TrackCommand(photonSubsystem, drivetrain)
+      new AlignToTarget(poseEstimatorSubsystem, drivetrain)
     );
 
     //zero Gyro angle, counter drift during testing. Hopefully get a better gyro soon  (Will make a loop overrun warning)
@@ -138,8 +143,7 @@ public class RobotContainer {
     // );
 
     return new SequentialCommandGroup(
-      new HomeCommand(drivetrain),
-      new TrackCommand(photonSubsystem, drivetrain)
+      new HomeCommand(drivetrain)
     );
   }
 
