@@ -28,7 +28,6 @@ import frc.robot.commands.AlignToTarget;
 import frc.robot.commands.HomeCommand;
 import frc.robot.commands.JoystickDrive;
 import frc.robot.subsystems.Drivetrain;
-import frc.robot.subsystems.PoseEstimatorSubsystem;
 
 
 /**
@@ -41,8 +40,7 @@ public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   private final PhotonCamera camera = new PhotonCamera("visionCamera");
 
-  private final Drivetrain drivetrain = new Drivetrain();
-  private final PoseEstimatorSubsystem poseEstimatorSubsystem = new PoseEstimatorSubsystem(drivetrain, camera);
+  private final Drivetrain drivetrain = new Drivetrain(camera);
 
   private final Joystick mainJoystick = new Joystick(1);
   
@@ -59,8 +57,8 @@ public class RobotContainer {
 
   // Create the AutoBuilder. This only needs to be created once when robot code starts, not every time you want to create an auto command. A good place to put this is in RobotContainer along with your subsystems.
   SwerveAutoBuilder autoBuilder = new SwerveAutoBuilder(
-    poseEstimatorSubsystem::getRobotPose, // Pose2d supplier
-    poseEstimatorSubsystem::setCurrentPose, // Pose2d consumer, used to reset odometry at the beginning of auto
+    drivetrain::getRobotPose, // Pose2d supplier
+    drivetrain::setCurrentPose, // Pose2d consumer, used to reset odometry at the beginning of auto
     drivetrain.kinematics, // SwerveDriveKinematics
     new PIDConstants(4, 0.0, 0.0), // PID constants to correct for translation error (used to create the X and Y PID controllers)
     new PIDConstants(4, 0.0, 0.0), // PID constants to correct for rotation error (used to create the rotation controller)
@@ -106,7 +104,7 @@ public class RobotContainer {
 
     
     new JoystickButton(mainJoystick, 2).whenHeld(
-      new AlignToTarget(poseEstimatorSubsystem, drivetrain)
+      new AlignToTarget(drivetrain)
     );
 
     //zero Gyro angle, counter drift during testing. Hopefully get a better gyro soon  (Will make a loop overrun warning)

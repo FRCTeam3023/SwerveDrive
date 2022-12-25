@@ -6,23 +6,37 @@ package frc.robot.subsystems;
 
 import java.util.List;
 
+import org.photonvision.PhotonCamera;
+
 import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.ModuleConstants;
+import frc.robot.Constants.PhotonConstants;
 
 public class Drivetrain extends SubsystemBase {
+
+  
+  private SwerveDrivePoseEstimator poseEstimator; 
+  private PhotonCamera photonCamera;
+  private double previousPipelineTimestamp = 0;
   
   ChassisSpeeds chassisSpeeds = new ChassisSpeeds(0,0,0);
 
@@ -42,28 +56,66 @@ public class Drivetrain extends SubsystemBase {
 
   public final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
 
-  //odometer for measuring field position
-  // private final SwerveDriveOdometry odometer = new SwerveDriveOdometry(kinematics, new Rotation2d(0));
+  private ShuffleboardTab tab = Shuffleboard.getTab("Drivetrain");
+  private NetworkTableEntry angleEntry = tab.add("Angle", "0").getEntry();
 
   public boolean allModuleHomeStatus = false;
 
 
-  public Drivetrain() {
+  public Drivetrain(PhotonCamera photonCamera) {
     calibrateGyro();
+
+    this.photonCamera = photonCamera;
+
+    poseEstimator = new SwerveDrivePoseEstimator(
+      getChassisAngle(), new Pose2d(), kinematics,
+      new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.01,0.01,0.01), 
+      new MatBuilder<>(Nat.N1(), Nat.N1()).fill(0.06), 
+      new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.04,0.04,0.04),
+      0.02);
+
+    setCurrentPose(new Pose2d(new Translation2d(1, 0), Rotation2d.fromDegrees(180)));
+
   }
 
   @Override
   public void periodic() {
 
-    // odometer.update(getChassisAngle(), frontLeft.getState(), frontRight.getState(), backLeft.getState(), backRight.getState());
-
     // This method will be called once per scheduler run
-    SmartDashboard.putBoolean("1 Homed", frontLeft.homeFinished);
-    SmartDashboard.putBoolean("2 Homed", frontRight.homeFinished);
-    SmartDashboard.putBoolean("3 Homed", backLeft.homeFinished);
-    SmartDashboard.putBoolean("4 Homed", backRight.homeFinished);
+    // SmartDashboard.putBoolean("1 Homed", frontLeft.homeFinished);
+    // SmartDashboard.putBoolean("2 Homed", frontRight.homeFinished);
+    // SmartDashboard.putBoolean("3 Homed", backLeft.homeFinished);
+    // SmartDashboard.putBoolean("4 Homed", backRight.homeFinished);
 
     SmartDashboard.putNumber("Bot Heading", getChassisAngle().getDegrees());
+
+    angleEntry.setString(getChassisAngle().toString());
+
+    var pipelineResult = photonCamera.getLatestResult();
+    var resultTimestamp = pipelineResult.getTimestampSeconds();
+
+    if (resultTimestamp != previousPipelineTimestamp && pipelineResult.hasTargets()) {
+      previousPipelineTimestamp = resultTimestamp;
+      var target = pipelineResult.getBestTarget();
+
+      if (target.getPoseAmbiguity() <= .05) {
+        var camToTarget = target.getBestCameraToTarget();
+        var targetToCamera = camToTarget.inverse();
+        var camPose = PhotonConstants.TARGET_POSE.transformBy(targetToCamera);
+
+        var visionMeasurement = camPose.transformBy(PhotonConstants.CAMERA_TO_ROBOT).toPose2d();
+        poseEstimator.addVisionMeasurement(visionMeasurement, resultTimestamp);
+        SmartDashboard.putString("Vision Pose", visionMeasurement.toString());
+
+
+      }
+    }
+
+    
+    poseEstimator.update(getChassisAngle(), getModuleStates());
+
+    SmartDashboard.putString("Robot Pose", getRobotPose().toString());
+
 
   }
 
@@ -86,7 +138,7 @@ public class Drivetrain extends SubsystemBase {
 
     //field relative or not, forward always away from drive station
     if(isFieldRelative){
-      chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, getChassisAngle());
+      chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rot, getRobotPose().getRotation());
     } else {
       chassisSpeeds = new ChassisSpeeds(xSpeed,ySpeed,rot);
     }
@@ -124,20 +176,13 @@ public class Drivetrain extends SubsystemBase {
     return states;
   }
 
-  // /**
-  // * @return postion (pose) of bot on field
-  // */  
-  // public Pose2d getPose(){
-  //   return odometer.getPoseMeters();
-  // }
+  public Pose2d getRobotPose(){
+    return poseEstimator.getEstimatedPosition();
+  }
 
-  // /**
-  //  * Reset odometry to new position on the field. Uses current heading of the bot but changes field pose
-  //  * @param pose new pose2d
-  //  */
-  // public void resetOdometry(Pose2d pose){
-  //   odometer.resetPosition(pose, getChassisAngle());
-  // }
+  public void setCurrentPose(Pose2d newPose) {
+    poseEstimator.resetPosition(newPose, getChassisAngle());
+  }
 
 
   /**

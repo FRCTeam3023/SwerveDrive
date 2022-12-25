@@ -18,12 +18,10 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
-import frc.robot.subsystems.PoseEstimatorSubsystem;
 
 public class AlignToTarget extends CommandBase {
   /** Creates a new AlignToTarget. */
   Drivetrain drivetrain;
-  PoseEstimatorSubsystem poseEstimator;
 
   Pose2d targetPose = new Pose2d(new Translation2d(2, 0), new Rotation2d(Units.degreesToRadians(180)));
 
@@ -33,9 +31,8 @@ public class AlignToTarget extends CommandBase {
 
 
 
-  public AlignToTarget(PoseEstimatorSubsystem poseEstimator, Drivetrain drivetrain) {
+  public AlignToTarget(Drivetrain drivetrain) {
     this.drivetrain = drivetrain;
-    this.poseEstimator = poseEstimator;
 
     addRequirements(drivetrain);
 
@@ -54,15 +51,15 @@ public class AlignToTarget extends CommandBase {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    var currentPose = poseEstimator.getRobotPose();
+    var currentPose = drivetrain.getRobotPose();
 
     var xSpeed = xController.calculate(currentPose.getX(), targetPose.getX());
     var ySpeed = yController.calculate(currentPose.getY(), targetPose.getY());
     var thetaSpeed = thetaController.calculate(currentPose.getRotation().getRadians(), targetPose.getRotation().getRadians());
 
-    SmartDashboard.putNumber("X", xSpeed);
-    SmartDashboard.putNumber("Y", ySpeed);
-    SmartDashboard.putNumber("Theta", thetaSpeed);
+    // SmartDashboard.putNumber("X", xSpeed);
+    // SmartDashboard.putNumber("Y", ySpeed);
+    // SmartDashboard.putNumber("Theta", thetaSpeed);
 
     drivetrain.drive(xSpeed, ySpeed, thetaSpeed, true);
   }
