@@ -24,7 +24,7 @@ public final class Constants {
     //Max radians/sec that the bot will rotate at
     public static final double MAX_ANGULAR_SPEED = 4;
     //acceleration of rotation, rad/sec^2
-    public static final double MAX_ANGULAR_ACCELERATION = 8;
+    public static final double MAX_ANGULAR_ACCELERATION = 16;
 
     
     
@@ -78,7 +78,7 @@ public final class Constants {
 
         public static final Transform3d ROBOT_TO_CAMERA = CAMERA_TO_ROBOT.inverse();
 
-        public static final Pose3d TARGET_POSE = new Pose3d(0, 0, Units.inchesToMeters(24), new Rotation3d());
+        public static final Pose3d TARGET_POSE = new Pose3d(0, 0, Units.inchesToMeters(23.5), new Rotation3d());
     }
 
 }

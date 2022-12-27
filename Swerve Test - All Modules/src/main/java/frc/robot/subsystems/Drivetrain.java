@@ -16,6 +16,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
@@ -34,7 +35,7 @@ import frc.robot.Constants.PhotonConstants;
 public class Drivetrain extends SubsystemBase {
 
   
-  private SwerveDrivePoseEstimator poseEstimator; 
+  
   private PhotonCamera photonCamera;
   private double previousPipelineTimestamp = 0;
   
@@ -56,6 +57,14 @@ public class Drivetrain extends SubsystemBase {
 
   public final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
 
+  private final SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
+    getChassisAngle(), new Pose2d(), kinematics,
+    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.01,0.01,0.03), 
+    new MatBuilder<>(Nat.N1(), Nat.N1()).fill(0.08), 
+    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.04,0.04,0.02),
+    0.02);
+     
+
   private ShuffleboardTab tab = Shuffleboard.getTab("Drivetrain");
   private NetworkTableEntry angleEntry = tab.add("Angle", "0").getEntry();
 
@@ -66,13 +75,6 @@ public class Drivetrain extends SubsystemBase {
     calibrateGyro();
 
     this.photonCamera = photonCamera;
-
-    poseEstimator = new SwerveDrivePoseEstimator(
-      getChassisAngle(), new Pose2d(), kinematics,
-      new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.01,0.01,0.01), 
-      new MatBuilder<>(Nat.N1(), Nat.N1()).fill(0.06), 
-      new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.04,0.04,0.04),
-      0.02);
 
     setCurrentPose(new Pose2d(new Translation2d(1, 0), Rotation2d.fromDegrees(180)));
 
@@ -99,11 +101,11 @@ public class Drivetrain extends SubsystemBase {
       var target = pipelineResult.getBestTarget();
 
       if (target.getPoseAmbiguity() <= .05) {
-        var camToTarget = target.getBestCameraToTarget();
-        var targetToCamera = camToTarget.inverse();
-        var camPose = PhotonConstants.TARGET_POSE.transformBy(targetToCamera);
+        Transform3d camToTarget = target.getBestCameraToTarget();
+        Transform3d targetToCamera = camToTarget.inverse();
+        Pose3d camPose = PhotonConstants.TARGET_POSE.transformBy(targetToCamera);
 
-        var visionMeasurement = camPose.transformBy(PhotonConstants.CAMERA_TO_ROBOT).toPose2d();
+        Pose2d visionMeasurement = camPose.transformBy(PhotonConstants.CAMERA_TO_ROBOT).toPose2d();
         poseEstimator.addVisionMeasurement(visionMeasurement, resultTimestamp);
         SmartDashboard.putString("Vision Pose", visionMeasurement.toString());
 

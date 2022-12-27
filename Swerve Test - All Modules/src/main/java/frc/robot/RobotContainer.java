@@ -19,6 +19,7 @@ import org.photonvision.PhotonCamera;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
@@ -55,6 +56,7 @@ public class RobotContainer {
   // in your code that will be used by all path following commands.
   HashMap<String, Command> eventMap = new HashMap<>();
 
+
   // Create the AutoBuilder. This only needs to be created once when robot code starts, not every time you want to create an auto command. A good place to put this is in RobotContainer along with your subsystems.
   SwerveAutoBuilder autoBuilder = new SwerveAutoBuilder(
     drivetrain::getRobotPose, // Pose2d supplier
@@ -70,6 +72,9 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    SmartDashboard.putBoolean("triggered", false);
+    eventMap.put("event", new InstantCommand(() -> SmartDashboard.putBoolean("triggered", true)));
+
     PathPlannerServer.startServer(5811);
     drivetrain.setDefaultCommand(joystickDrive);
 
@@ -133,16 +138,14 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
 
-    //   Command fullAuto = autoBuilder.fullAuto(pathGroup);
-
-    // return new SequentialCommandGroup(
-    //   new HomeCommand(drivetrain),
-    //   fullAuto
-    // );
+    Command fullAuto = autoBuilder.fullAuto(pathGroup);
 
     return new SequentialCommandGroup(
-      new HomeCommand(drivetrain)
+      new HomeCommand(drivetrain),
+      fullAuto,
+      new InstantCommand(() -> SmartDashboard.putBoolean("triggered", false))
     );
+
   }
 
   
