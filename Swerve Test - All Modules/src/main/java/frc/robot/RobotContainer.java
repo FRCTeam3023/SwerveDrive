@@ -74,6 +74,7 @@ public class RobotContainer {
   public RobotContainer() {
     SmartDashboard.putBoolean("triggered", false);
     eventMap.put("event", new InstantCommand(() -> SmartDashboard.putBoolean("triggered", true)));
+    eventMap.put("deployIntake", new HomeCommand(drivetrain));
 
     PathPlannerServer.startServer(5811);
     drivetrain.setDefaultCommand(joystickDrive);
@@ -141,7 +142,7 @@ public class RobotContainer {
     Command fullAuto = autoBuilder.fullAuto(pathGroup);
 
     return new SequentialCommandGroup(
-      new HomeCommand(drivetrain),
+      // new HomeCommand(drivetrain),
       fullAuto,
       new InstantCommand(() -> SmartDashboard.putBoolean("triggered", false))
     );

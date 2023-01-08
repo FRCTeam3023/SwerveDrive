@@ -84,8 +84,8 @@ public class SwerveModule {
         driveMotor.config_kF(MMConstants.PRIMARY_PID_LOOP_IDX, driveGains.kF);
 
         //peak Output
-        driveMotor.configPeakOutputForward(driveGains.kPeakOutput, MMConstants.TIMEOUT_MS);
-        driveMotor.configPeakOutputReverse(-driveGains.kPeakOutput, MMConstants.TIMEOUT_MS);
+        driveMotor.configPeakOutputForward(driveGains.kPeakOutput);
+        driveMotor.configPeakOutputReverse(-driveGains.kPeakOutput);
 
 
 
