@@ -4,8 +4,8 @@
 
 package frc.robot;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import com.pathplanner.lib.PathConstraints;
 import com.pathplanner.lib.PathPlanner;
@@ -50,7 +50,7 @@ public class RobotContainer {
 
   // This will load the file "Simple Path.path" and generate it with a max velocity of 2 m/s and a max acceleration of 1 m/s^2
   // for every path in the group
-  ArrayList<PathPlannerTrajectory> pathGroup = PathPlanner.loadPathGroup("Simple Path", new PathConstraints(3, 1.5));
+  List<PathPlannerTrajectory> pathGroup = PathPlanner.loadPathGroup("Simple Path", new PathConstraints(3, 1.5));
 
   // This is just an example event map. It would be better to have a constant, global event map
   // in your code that will be used by all path following commands.

@@ -20,6 +20,7 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
@@ -57,16 +58,18 @@ public class Drivetrain extends SubsystemBase {
 
   public final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
 
-  private final SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
-    getChassisAngle(), new Pose2d(), kinematics,
-    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.01,0.01,0.03), 
-    new MatBuilder<>(Nat.N1(), Nat.N1()).fill(0.08), 
-    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.04,0.04,0.02),
-    0.02);
+  //Swerve Drive Pose Estimator, uses the combination of encoder data and vision to estimate pose on the field
+  private SwerveDrivePoseEstimator poseEstimator = new SwerveDrivePoseEstimator(
+    kinematics, 
+    getChassisAngle(), 
+    new SwerveModulePosition[] {frontLeft.getPosition(), frontRight.getPosition(), backLeft.getPosition(), backRight.getPosition()},
+    new Pose2d(0,0, new Rotation2d()),
+    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.1,0.1,0.1), //Standard deviations for state estimate, (m,m,rad). Increase to trust less
+    new MatBuilder<>(Nat.N3(), Nat.N1()).fill(0.9,0.9,0.9) //Standard deviations for vision estimate, (m,m,rad). Increase to trust less
+    );
      
 
   private ShuffleboardTab tab = Shuffleboard.getTab("Drivetrain");
-  private NetworkTableEntry angleEntry = tab.add("Angle", "0").getEntry();
 
   public boolean allModuleHomeStatus = false;
 
@@ -84,14 +87,12 @@ public class Drivetrain extends SubsystemBase {
   public void periodic() {
 
     // This method will be called once per scheduler run
-    // SmartDashboard.putBoolean("1 Homed", frontLeft.homeFinished);
-    // SmartDashboard.putBoolean("2 Homed", frontRight.homeFinished);
-    // SmartDashboard.putBoolean("3 Homed", backLeft.homeFinished);
-    // SmartDashboard.putBoolean("4 Homed", backRight.homeFinished);
+    SmartDashboard.putBoolean("1 Homed", frontLeft.homeFinished);
+    SmartDashboard.putBoolean("2 Homed", frontRight.homeFinished);
+    SmartDashboard.putBoolean("3 Homed", backLeft.homeFinished);
+    SmartDashboard.putBoolean("4 Homed", backRight.homeFinished);
 
     SmartDashboard.putNumber("Bot Heading", getChassisAngle().getDegrees());
-
-    angleEntry.setString(getChassisAngle().toString());
 
     var pipelineResult = photonCamera.getLatestResult();
     var resultTimestamp = pipelineResult.getTimestampSeconds();
@@ -114,7 +115,7 @@ public class Drivetrain extends SubsystemBase {
     }
 
     
-    poseEstimator.update(getChassisAngle(), getModuleStates());
+    poseEstimator.update(getChassisAngle(), getModulePositions());
 
     SmartDashboard.putString("Robot Pose", getRobotPose().toString());
 
@@ -178,12 +179,21 @@ public class Drivetrain extends SubsystemBase {
     return states;
   }
 
+  public SwerveModulePosition[] getModulePositions(){
+    return new SwerveModulePosition[] {
+      frontLeft.getPosition(),
+      frontRight.getPosition(),
+      backLeft.getPosition(),
+      backRight.getPosition()
+    };
+  }
+
   public Pose2d getRobotPose(){
     return poseEstimator.getEstimatedPosition();
   }
 
   public void setCurrentPose(Pose2d newPose) {
-    poseEstimator.resetPosition(newPose, getChassisAngle());
+    poseEstimator.resetPosition(getChassisAngle(), getModulePositions(), newPose);
   }
 
 
